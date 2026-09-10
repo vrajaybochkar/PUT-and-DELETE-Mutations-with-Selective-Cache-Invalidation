@@ -45,19 +45,30 @@ export default function ThreadItem({ thread }) {
   const [title, setTitle] = useState(thread.title);
   const [editing, setEditing] = useState(false);
 
-  // TODO: const queryClient = useQueryClient();
-  // TODO: const editMutation = useMutation({ ... });
-  // TODO: const deleteMutation = useMutation({ ... });
+  const queryClient = useQueryClient();
+  const editMutation = useMutation({
+    mutationFn: ({ id, data }) => updateThread(id, data),
+    onSuccess: (updated, { id }) => {
+      queryClient.invalidateQueries({ queryKey: ["threads"] });
+      queryClient.invalidateQueries({ queryKey: ["thread", id] });
+      setEditing(false);
+    },
+  });
+  const deleteMutation = useMutation({
+    mutationFn: deleteThread,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["threads"] });
+    },
+  });
 
   function handleSave() {
     // TODO: replace with editMutation.mutate({ id: thread.id, data: { title } })
-    console.log("save", thread.id, { title });
-    setEditing(false);
+    editMutation.mutate({ id: thread.id, data: { title } });
   }
 
   function handleDelete() {
     // TODO: replace with deleteMutation.mutate(thread.id)
-    console.log("delete", thread.id);
+    deleteMutation.mutate(thread.id);
   }
 
   if (editing) {
@@ -70,8 +81,8 @@ export default function ThreadItem({ thread }) {
         />
         <div className="row">
           {/* TODO: disable while editMutation.isPending; label it "Saving…" */}
-          <button className="btn-primary" onClick={handleSave}>
-            Save
+          <button className="btn-primary" onClick={handleSave} disabled={editMutation.isPending}>
+            {editMutation.isPending ? "Saving…" : "Save"}
           </button>
           <button
             className="btn-ghost"
@@ -95,9 +106,10 @@ export default function ThreadItem({ thread }) {
         <button className="btn-ghost" onClick={() => setEditing(true)}>
           Edit
         </button>
+
         {/* TODO: disable while deleteMutation.isPending; label it "Deleting…" */}
-        <button className="btn-danger" onClick={handleDelete}>
-          Delete
+        <button className="btn-danger" onClick={handleDelete} disabled={deleteMutation.isPending}>
+          {deleteMutation.isPending ? "Deleting…" : "Delete"}
         </button>
       </div>
     </li>
